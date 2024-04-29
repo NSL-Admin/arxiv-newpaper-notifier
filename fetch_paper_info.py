@@ -19,11 +19,11 @@ parser.add_argument(
 )
 parser.add_argument(  # TODO: Explain that this will be interpreted as UTC in README
     "--date",
-    help="Date to search for papers within (in the format like 2024-01-01). Defaults to the day before yesterday",
+    help="Date to search for papers within (in the format like 2024-01-01). Defaults to yesterday",
     type=lambda datestr: datetime.strptime(datestr, "%Y-%m-%d").replace(
         tzinfo=timezone.utc
     ),
-    default=(datetime.today() - timedelta(days=2)).replace(
+    default=(datetime.today() - timedelta(days=1)).replace(
         tzinfo=timezone.utc
     ),  # defaults to yesterday
     required=False,
