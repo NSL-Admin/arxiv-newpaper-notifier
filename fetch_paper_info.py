@@ -89,7 +89,7 @@ if __name__ == "__main__":
     search_results = fetch_papers(
         category=args.category,
         date=args.date,
-        max_results=args.max_papers,
+        max_papers=args.max_papers,
         logger=logger,
     )
 

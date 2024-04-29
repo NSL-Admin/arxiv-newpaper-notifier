@@ -17,7 +17,7 @@ from const import Paper, PaperGist, PaperList
 
 
 def fetch_papers(
-    category: str, date: datetime, max_results: int, logger: Logger
+    category: str, date: datetime, max_papers: int, logger: Logger
 ) -> list[Result]:
     client = Client(delay_seconds=1)
     search = Search(
@@ -35,7 +35,7 @@ def fetch_papers(
     selected_sorted = sorted(
         selected, key=lambda x: len(str(x.journal_ref)), reverse=True
     )  # prioritize papers already published in a journal
-    return selected_sorted[:max_results]
+    return selected_sorted[:max_papers]
 
 
 def generate_gist(llm: Llama, title: str, abstract: str, logger: Logger) -> PaperGist:
