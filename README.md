@@ -10,7 +10,7 @@ arXivから特定カテゴリの論文を取得するスクリプトと、その
 1. requirements.txt に列挙されたパッケージを全てインストールしてください。
 
 > [!IMPORTANT]
-> GPUを使用してLLMを高速化したい場合、 `llama-cpp-python` のGPU対応バイナリを以下のコマンドによってインストールしてください。ご使用中の環境のCUDAのバージョンに応じて `cu121` の部分を変更してください。既存のバイナリが存在しない場合、[公式ドキュメント](https://github.com/abetlen/llama-cpp-python?tab=readme-ov-file#installation-configuration)に従ってビルドしてください。
+> GPUを使用してLLMを高速化したい場合、 `llama-cpp-python` のGPU対応バイナリを以下のコマンドによってインストールしてください。ご使用中の環境のCUDAのバージョンに応じて `cu121` の部分を変更してください。使用しているCUDAのバージョンが古いなどの原因で既存のバイナリが存在しない場合、[公式ドキュメント](https://github.com/abetlen/llama-cpp-python?tab=readme-ov-file#installation-configuration)に従ってビルドしてください。
 > ```bash
 > pip install llama-cpp-python --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cu121 --upgrade --force-reinstall --no-cache-dir
 > ```
