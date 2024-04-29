@@ -19,7 +19,7 @@ from const import Paper, PaperGist, PaperList
 def fetch_papers(
     category: str, date: datetime, max_papers: int, logger: Logger
 ) -> list[Result]:
-    client = Client(delay_seconds=1)
+    client = Client(page_size=80)
     search = Search(
         query=f"cat:{category}",
         max_results=80,  # get a large number of papers first
