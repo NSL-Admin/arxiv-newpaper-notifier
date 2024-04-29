@@ -3,6 +3,11 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+# retain directory structure of data folder
+data/**
+!data/**/
+!data/**/.gitkeep
+
 # C extensions
 *.so
 
