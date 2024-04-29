@@ -59,11 +59,7 @@ if __name__ == "__main__":
         paper_list = PaperList.model_validate_json(jsonfile.read())
 
     if not paper_list.papers:
-        client.chat_postMessage(
-            channel=args.channel_id,
-            text=f'No paper appeared on {paper_list.date.strftime("%Y-%m-%d")} (UTC)',
-            mrkdwn=True,
-        )
+        # No paper appeared on that day
         sys.exit()
 
     # build parent message and send it
