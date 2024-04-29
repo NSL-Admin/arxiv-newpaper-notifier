@@ -19,24 +19,24 @@ parser.add_argument(
 )
 parser.add_argument(  # TODO: Explain that this will be interpreted as UTC in README
     "--date",
-    help="Date to search for papers within (in the format like 2024-01-01)",
+    help="Date to search for papers within (in the format like 2024-01-01). Defaults to the day before yesterday",
     type=lambda datestr: datetime.strptime(datestr, "%Y-%m-%d").replace(
         tzinfo=timezone.utc
     ),
-    default=(datetime.today() - timedelta(days=1)).replace(
+    default=(datetime.today() - timedelta(days=2)).replace(
         tzinfo=timezone.utc
     ),  # defaults to yesterday
     required=False,
 )
 parser.add_argument(
     "--data-dir",
-    help="Path to a directory to store data in",
+    help="Path to a directory to store data in. Defaults to ./data",
     default=os.path.join(os.path.dirname(__file__), "data"),
     required=False,
 )
 parser.add_argument(
     "--max-papers",
-    help="Max number of papers to search for",
+    help="Max number of papers to search for. Defaults to 20",
     type=int,
     default=20,
     required=False,
@@ -102,5 +102,7 @@ if __name__ == "__main__":
     )
 
     # write to json
-    with open(os.path.join(args.data_dir, "papers.json"), "w") as jsonfile:
+    with open(
+        os.path.join(args.data_dir, f"papers-{args.category}.json"), "w"
+    ) as jsonfile:
         jsonfile.write(paperlist.model_dump_json())
