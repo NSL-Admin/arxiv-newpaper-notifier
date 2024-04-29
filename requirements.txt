@@ -1,0 +1,8 @@
+arxiv
+huggingface-hub
+llama-cpp-python
+Pillow
+pydantic
+PyMuPDF
+python-dotenv
+slack-sdk
