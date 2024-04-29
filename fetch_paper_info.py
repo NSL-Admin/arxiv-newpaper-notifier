@@ -23,9 +23,10 @@ parser.add_argument(  # TODO: Explain that this will be interpreted as UTC in RE
     type=lambda datestr: datetime.strptime(datestr, "%Y-%m-%d").replace(
         tzinfo=timezone.utc
     ),
-    default=(datetime.today() - timedelta(days=1)).replace(
-        tzinfo=timezone.utc
-    ),  # defaults to yesterday
+    default=(
+        datetime.today().replace(hour=0, minute=0, second=0, microsecond=0)
+        - timedelta(days=1)
+    ).replace(tzinfo=timezone.utc),  # defaults to 00:00 AM of yesterday
     required=False,
 )
 parser.add_argument(

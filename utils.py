@@ -22,7 +22,7 @@ def fetch_papers(
     client = Client(delay_seconds=1)
     search = Search(
         query=f"cat:{category}",
-        max_results=max_results,
+        max_results=80,  # get a large number of papers first
         sort_by=SortCriterion.SubmittedDate,
     )
     all_results = list(client.results(search=search))
@@ -32,7 +32,10 @@ def fetch_papers(
     logger.info(
         f'found {len(selected)} papers published on {date.strftime("%Y-%m-%d")}'
     )
-    return selected
+    selected_sorted = sorted(
+        selected, key=lambda x: len(str(x.journal_ref)), reverse=True
+    )  # prioritize papers already published in a journal
+    return selected_sorted[:max_results]
 
 
 def generate_gist(llm: Llama, title: str, abstract: str, logger: Logger) -> PaperGist:
