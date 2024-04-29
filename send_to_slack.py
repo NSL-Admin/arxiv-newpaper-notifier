@@ -8,10 +8,16 @@ from dotenv import load_dotenv
 from slack_sdk.web import WebClient
 
 from block import get_paper_block
-from const import PaperList
+from const import ARXIV_CATEGORIES, PaperList
 
 parser = argparse.ArgumentParser(
     description="Send information of the latest papers to Slack"
+)
+parser.add_argument(
+    "--category",
+    help="Category ID to search for papers of",
+    choices=ARXIV_CATEGORIES,
+    required=True,
 )
 parser.add_argument(
     "--channel-id",
@@ -49,7 +55,7 @@ if __name__ == "__main__":
     client = WebClient(token=os.environ["SLACK_API_TOKEN"])
 
     # load paperlist from json
-    with open(os.path.join(args.data_dir, "papers.json")) as jsonfile:
+    with open(os.path.join(args.data_dir, f"papers-{args.category}.json")) as jsonfile:
         paper_list = PaperList.model_validate_json(jsonfile.read())
 
     if not paper_list.papers:
