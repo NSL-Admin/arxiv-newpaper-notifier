@@ -33,3 +33,7 @@ python fetch_paper_info.py --category 新着論文を探すカテゴリ [--date 
 ```bash
 python send_to_slack.py --category Slackに送信する論文情報のカテゴリ --channel-id 論文情報を送る先のチャンネルID [--data-dir データ保存用ディレクトリへのパス] [--verbose]
 ```
+
+## Tips
+
+- このスクリプトを毎日実行する場合、arXivの[Announcement Schedule](https://info.arxiv.org/help/availability.html)により新着論文が1件も取得されない日があります。
