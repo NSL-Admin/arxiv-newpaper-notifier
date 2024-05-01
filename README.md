@@ -19,7 +19,7 @@ arXivから特定カテゴリの論文を取得するスクリプトと、その
 
 ## 使い方
 
-1. fetch_paper_info.py を使ってarXivから論文情報を取得します。[]で囲まれた引数は省略可能です。
+1. fetch_paper_info.py を使ってarXivから論文情報を取得します。[]で囲まれた引数は省略可能です。特に `--date` を省略した場合、一昨日の1日の間に公開された論文を取得します。（投稿された論文の情報がAPIに反映されるまで少々時間がかかるためデフォルト値が一昨日になっています）
 
 ```bash
 python fetch_paper_info.py --category 新着論文を探すカテゴリ [--date 論文の出版日(UTC) (YYYY-mm-dd 形式)] [--data-dir データ保存用ディレクトリへのパス] [--max-papers 取得する論文の最大数] [--gpu-index 使用したいGPUのインデックス (0-indexed)] [--verbose]
