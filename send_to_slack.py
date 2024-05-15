@@ -5,6 +5,7 @@ import sys
 import time
 
 from dotenv import load_dotenv
+from slack_sdk.errors import SlackApiError
 from slack_sdk.web import WebClient
 
 from block import get_paper_block
@@ -84,10 +85,20 @@ if __name__ == "__main__":
             image_fileid = fileupload_resp.data["file"]["id"]  # type:ignore
         else:
             image_fileid = None
-        client.chat_postMessage(
-            text=f"summary of {paper.title}",
-            channel=args.channel_id,
-            blocks=get_paper_block(paper=paper, image_fileid=image_fileid),
-            thread_ts=slack_resp.data["ts"],  # type:ignore
-        )
+        try:
+            client.chat_postMessage(
+                text=f"summary of {paper.title}",
+                channel=args.channel_id,
+                blocks=get_paper_block(paper=paper, image_fileid=image_fileid),
+                thread_ts=slack_resp.data["ts"],  # type:ignore
+            )
+        except SlackApiError:
+            # some image files lead to "[ERROR] invalid slack file" error.
+            # In that case, remove the image from the block and try to send again
+            client.chat_postMessage(
+                text=f"summary of {paper.title}",
+                channel=args.channel_id,
+                blocks=get_paper_block(paper=paper, image_fileid=None),
+                thread_ts=slack_resp.data["ts"],  # type:ignore
+            )
         time.sleep(1)  # sleep for 1 second
