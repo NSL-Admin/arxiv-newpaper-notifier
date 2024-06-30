@@ -12,6 +12,7 @@ import fitz
 from arxiv import Client, Result, Search, SortCriterion
 from llama_cpp import Llama
 from PIL import Image
+from pydantic import ValidationError
 
 from const import Paper, PaperGist, PaperList
 
@@ -38,7 +39,9 @@ def fetch_papers(
     return selected_sorted[:max_papers]
 
 
-def generate_gist(llm: Llama, title: str, abstract: str, logger: Logger) -> PaperGist:
+def generate_gist(
+    llm: Llama, title: str, abstract: str, logger: Logger
+) -> Optional[PaperGist]:
     logger.info("starting gist generation with LLM")
     llm_resp = llm.create_chat_completion(
         messages=[
@@ -78,7 +81,11 @@ def generate_gist(llm: Llama, title: str, abstract: str, logger: Logger) -> Pape
     )
     logger.info("finished gist generation with LLM")
     llm_resp_text = cast(str, llm_resp["choices"][0]["message"]["content"])  # type:ignore
-    return PaperGist.model_validate_json(llm_resp_text)
+    try:
+        return PaperGist.model_validate_json(llm_resp_text)
+    except ValidationError as e:
+        logger.error(f'failed to generate gist for paper "{title}", error: {e}')
+        return None
 
 
 def get_first_figure(pdf_url: str, data_dir: str, logger: Logger) -> Optional[str]:
@@ -136,6 +143,8 @@ def process_results(
         gist = generate_gist(
             llm=llm, title=result.title, abstract=result.summary, logger=logger
         )
+        if not gist:  # if gist generation failed, skip this paper
+            continue
         first_figure_path = get_first_figure(
             pdf_url=result.pdf_url, data_dir=data_dir, logger=logger
         )
