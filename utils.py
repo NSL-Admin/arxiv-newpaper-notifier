@@ -40,7 +40,7 @@ def fetch_papers(
 
 
 def generate_gist(llm: Llama, title: str, abstract: str, logger: Logger) -> PaperGist:
-    logger.info("starting gist generation with LLM")
+    logger.info(f'starting gist generation for "{title}" with LLM')
     llm_resp = llm.create_chat_completion(
         messages=[
             {
@@ -77,7 +77,7 @@ def generate_gist(llm: Llama, title: str, abstract: str, logger: Logger) -> Pape
         },
         temperature=0.7,
     )
-    logger.info("finished gist generation with LLM")
+    logger.info('finished gist generation for "{title}" with LLM')
     llm_resp_text = cast(str, llm_resp["choices"][0]["message"]["content"])  # type:ignore
     try:
         return PaperGist.model_validate_json(llm_resp_text)
