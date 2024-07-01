@@ -39,9 +39,7 @@ def fetch_papers(
     return selected_sorted[:max_papers]
 
 
-def generate_gist(
-    llm: Llama, title: str, abstract: str, logger: Logger
-) -> Optional[PaperGist]:
+def generate_gist(llm: Llama, title: str, abstract: str, logger: Logger) -> PaperGist:
     logger.info("starting gist generation with LLM")
     llm_resp = llm.create_chat_completion(
         messages=[
@@ -84,14 +82,14 @@ def generate_gist(
     try:
         return PaperGist.model_validate_json(llm_resp_text)
     except ValidationError as e:
-        logger.error(f'failed to generate gist for paper "{title}", error: {e}')
-        return None
+        logger.error(
+            f'failed to generate gist for "{title}" in correct format. Pydantic Error: {e}'
+        )
+        raise RuntimeError(f'failed to generate gist for "{title}"')
 
 
 def get_first_figure(pdf_url: str, data_dir: str, logger: Logger) -> Optional[str]:
     # TODO: filter picture with aspect ratio
-    if not pdf_url:
-        return None
     pdf_name = os.path.basename(pdf_url)
     with tempfile.TemporaryDirectory() as tmpdir:
         # download pdf to temporary directory
@@ -140,13 +138,17 @@ def process_results(
 ) -> PaperList:
     papers = []
     for result in search_results:
-        gist = generate_gist(
-            llm=llm, title=result.title, abstract=result.summary, logger=logger
-        )
-        if not gist:  # if gist generation failed, skip this paper
+        try:
+            gist = generate_gist(
+                llm=llm, title=result.title, abstract=result.summary, logger=logger
+            )
+        except RuntimeError:
+            # failed to generate gist for this paper
             continue
-        first_figure_path = get_first_figure(
-            pdf_url=result.pdf_url, data_dir=data_dir, logger=logger
+        first_figure_path = (
+            get_first_figure(pdf_url=result.pdf_url, data_dir=data_dir, logger=logger)
+            if result.pdf_url
+            else None
         )
         paper = Paper(
             title=result.title,
