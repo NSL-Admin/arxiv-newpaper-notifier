@@ -1,0 +1,22 @@
+[project]
+name = "arxiv-newpaper-notifier"
+version = "0.1.0"
+description = "Slack Bot that sends notification of the latest papers published on arXiv."
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "arxiv>=2.2.0",
+    "langchain>=0.3.25",
+    "langchain-ollama>=0.3.3",
+    "langchain-openai>=0.3.18",
+    "pillow>=11.2.1",
+    "pydantic>=2.11.5",
+    "pymupdf>=1.26.0",
+    "python-dotenv>=1.1.0",
+    "slack-sdk>=3.35.0",
+]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.11.12",
+]
