@@ -72,7 +72,29 @@ def get_paper_block(paper: Paper, image_fileid: Optional[str]) -> list[Block]:
                                 ),
                             ]
                         ),
-                    ],
+                    ]
+                    + (
+                        [
+                            RichTextSectionElement(
+                                elements=[
+                                    RichTextElementParts.Text(
+                                        text="references: ",
+                                        style=RichTextElementParts.TextStyle(bold=True),
+                                    ),
+                                    RichTextElementParts.Text(
+                                        text=", ".join(
+                                            [
+                                                f"<{u.url}|{u.text}>"
+                                                for u in paper.gist.reference_urls
+                                            ]
+                                        ),
+                                    ),
+                                ]
+                            ),
+                        ]
+                        if paper.gist.reference_urls
+                        else []  # omit references section if no reference url is provided
+                    ),
                 ),
             ]
         ),

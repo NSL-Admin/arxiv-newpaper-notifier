@@ -3,9 +3,8 @@ import logging
 import os
 from datetime import datetime, timedelta, timezone
 
-from llama_cpp import Llama
-
 from const import ARXIV_CATEGORIES
+from llms import prepare_llms
 from utils import fetch_papers, process_results
 
 parser = argparse.ArgumentParser(
@@ -17,7 +16,7 @@ parser.add_argument(
     choices=ARXIV_CATEGORIES,
     required=True,
 )
-parser.add_argument(  # TODO: Explain that this will be interpreted as UTC in README
+parser.add_argument(
     "--date",
     help="Date to search for papers within (in the format like 2024-01-01). Defaults to yesterday",
     type=lambda datestr: datetime.strptime(datestr, "%Y-%m-%d").replace(
@@ -43,14 +42,35 @@ parser.add_argument(
     required=False,
 )
 parser.add_argument(
-    "--gpu-index",
-    help="Use `gpu_index`th GPU (starts from 0) to accelerate LLM. If not specified, GPU will not be used",
-    type=int,
+    "--summarizer-llm-name",
+    help="Name of Ollama model who digests the paper into a summary.  Defaults to qwen3:8b",
+    type=str,
+    default="qwen3:8b",
+    required=False,
+)
+parser.add_argument(
+    "--summarizer-as-agent",
+    help="Instantiate summarizer as a LLM agent equipped with tools.",
+    action="store_true",
+    required=False,
+)
+parser.add_argument(
+    "--formatter-llm-name",
+    help="Name of Ollama model who converts a sumamry into the predefined JSON format. Defaults to gemma3:4b",
+    type=str,
+    default="gemma3:4b",
+    required=False,
+)
+parser.add_argument(
+    "--ollama-api-base-url",
+    help="URL to Ollama API. Defaults to http://127.0.0.1:11434",
+    type=str,
+    default="http://127.0.0.1:11434",
     required=False,
 )
 parser.add_argument(
     "--verbose",
-    help="Enable verbose logging from this script",
+    help="Enable verbose logging from this script.",
     action="store_true",
     required=False,
 )
@@ -64,26 +84,18 @@ if __name__ == "__main__":
     # create logger for logs from this app
     logger = logging.getLogger("fetch_paper_info")
     if args.verbose:
-        logger.setLevel(logging.INFO)
+        logger.setLevel(logging.DEBUG)
     else:
         logger.setLevel(logging.WARNING)
 
-    # load quantized LLM
-    # if `gpu_index` is specified, offload all layers to that GPU. Otherwise offload no layer.
-    if args.gpu_index:
-        llm = Llama.from_pretrained(
-            repo_id="QuantFactory/Meta-Llama-3-8B-Instruct-GGUF",
-            filename="Meta-Llama-3-8B-Instruct.Q5_K_M.gguf",
-            main_gpu=args.gpu_index,
-            n_gpu_layers=-1,
-            n_ctx=3096,  # Llama's context length. 512 by default.
-        )
-    else:
-        llm = Llama.from_pretrained(
-            repo_id="QuantFactory/Meta-Llama-3-8B-Instruct-GGUF",
-            filename="Meta-Llama-3-8B-Instruct.Q5_K_M.gguf",
-            n_ctx=3096,  # Llama's context length. 512 by default.
-        )
+    # instantiate LLMs
+    summarizer, formatter = prepare_llms(
+        summarizer_llm_name=args.summarizer_llm_name,
+        formatter_llm_name=args.formatter_llm_name,
+        ollama_api_base_url=args.ollama_api_base_url,
+        summarizer_as_agent=args.summarizer_as_agent,
+        debug=False,
+    )
 
     # fetch papers from arXiv
     search_results = fetch_papers(
@@ -97,7 +109,8 @@ if __name__ == "__main__":
     paperlist = process_results(
         search_results=search_results,
         date=args.date,
-        llm=llm,
+        summarizer=summarizer,
+        formatter=formatter,
         data_dir=args.data_dir,
         logger=logger,
     )

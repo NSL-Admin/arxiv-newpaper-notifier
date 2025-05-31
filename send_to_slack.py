@@ -65,9 +65,9 @@ if __name__ == "__main__":
 
     # build parent message and send it
     paper_titles = list(map(lambda x: x.title, paper_list.papers))
-    parent_msg = f'*The last {len(paper_titles)} papers of those submitted on {paper_list.date.strftime("%Y-%m-%d")} (UTC)*\n'
+    parent_msg = f"*The last {len(paper_titles)} papers of those submitted on {paper_list.date.strftime('%Y-%m-%d')} (UTC)*\n"
     for idx, title in enumerate(paper_titles):
-        parent_msg += f"{idx+1}. {title}\n"
+        parent_msg += f"{idx + 1}. {title}\n"
     slack_resp = client.chat_postMessage(
         channel=args.channel_id, text=parent_msg, mrkdwn=True
     )
