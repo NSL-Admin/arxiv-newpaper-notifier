@@ -1,18 +1,23 @@
 import io
 import os
+import re
 import tempfile
 import textwrap
 import urllib
 import urllib.request
 from datetime import datetime, timedelta
 from logging import Logger
-from typing import Optional, cast
+from typing import Any, Optional, cast
 
 import fitz
 from arxiv import Client, Result, Search, SortCriterion
-from llama_cpp import Llama
+from langchain_core.language_models.base import LanguageModelInput
+from langchain_core.messages.ai import AIMessage
+from langchain_core.messages.human import HumanMessage
+from langchain_core.runnables.base import Runnable
+from langchain_ollama import ChatOllama
+from langgraph.graph.graph import CompiledGraph
 from PIL import Image
-from pydantic import ValidationError
 
 from const import Paper, PaperGist, PaperList
 
@@ -31,7 +36,7 @@ def fetch_papers(
         r for r in all_results if date <= r.published < (date + timedelta(days=1))
     ]
     logger.info(
-        f'found {len(selected)} papers published on {date.strftime("%Y-%m-%d")}'
+        f"found {len(selected)} papers published on {date.strftime('%Y-%m-%d')}"
     )
     selected_sorted = sorted(
         selected, key=lambda x: len(str(x.journal_ref)), reverse=True
@@ -39,53 +44,86 @@ def fetch_papers(
     return selected_sorted[:max_papers]
 
 
-def generate_gist(llm: Llama, title: str, abstract: str, logger: Logger) -> PaperGist:
-    logger.info(f'starting gist generation for "{title}" with LLM')
-    llm_resp = llm.create_chat_completion(
-        messages=[
-            {
-                "role": "system",
-                "content": textwrap.dedent("""
-                        You are a renowned professor in Computer Science. Your students will ask you to extract key information from an abstract of an academic paper using your expertise, then you will give them your answer in the following JSON format:
-                        {
-                            "about":  # write what this research did in plain sentence (string),
-                            "objective":  # write what this research tried to achieve (string),
-                            "novelty":  # write how this research is superior to existing ones (string),
-                            "key":  # write what is the most important findings of this research (string),
-                        }
-                    """),
-            },
-            {
-                "role": "user",
-                "content": textwrap.dedent(f"""
-                        Please extract gist from the following abstract from a paper titled \"{title}\":
-                        {abstract}
-                    """),
-            },
-        ],
-        response_format={
-            "type": "json_object",
-            "schema": {
-                "type": "object",
-                "properties": {
-                    "about": {"type": "string"},
-                    "objective": {"type": "string"},
-                    "novelty": {"type": "string"},
-                    "key": {"type": "string"},
-                },
-            },
-        },
-        temperature=0.7,
-    )
-    logger.info('finished gist generation for "{title}" with LLM')
-    llm_resp_text = cast(str, llm_resp["choices"][0]["message"]["content"])  # type:ignore
-    try:
-        return PaperGist.model_validate_json(llm_resp_text)
-    except ValidationError as e:
-        logger.error(
-            f'failed to generate gist for "{title}" in correct format. Pydantic Error: {e}'
+def generate_gist(
+    summarizer: CompiledGraph | ChatOllama,
+    formatter: Runnable[LanguageModelInput, PaperGist],
+    title: str,
+    abstract: str,
+    logger: Logger,
+) -> PaperGist:
+    summarizer_input_text = textwrap.dedent(f"""
+        You are a renowned professor in Computer Science. \
+        Your lab student, who is well versed in various Computer Science fields, asked you to write a concise summary about the following academic paper utilizing your expertise.
+
+        Your summary can be written in a free format, but should answer questions below:
+        - [About] What did this research do?
+        - [Objective] What did this research tried to achieve?
+        - [Novelty] How is this research superior to existing ones?
+        - [Key] What are the most important findings of this research?
+
+        ```
+        [Paper Information]
+        title: {title}
+        abstract: {abstract}
+        ```
+        """)
+
+    # input type is different depending on whether the summarizer is an agent or not
+    if isinstance(summarizer, CompiledGraph):
+        summarizer_input_text = (
+            # here, the LLM is equipped with web search tools. So adding a short instruction about them.
+            summarizer_input_text
+            + "\nYou can use tools given to you to obtain additional information about unfamiliar notions and keywords that appear in the abstract. "
+            + "When you used tools to obtain information about a keyword from a Web page, write its URL and title in the reference section at the bottom of the summary."
         )
-        raise RuntimeError(f'failed to generate gist for "{title}"')
+        summarizer_input = {"messages": [HumanMessage(summarizer_input_text)]}
+        summarizer_model_name = summarizer.get_name()
+    else:
+        summarizer_input = [HumanMessage(summarizer_input_text)]
+        summarizer_model_name = summarizer.model
+
+    logger.info(
+        f'starting summary generation for "{title}" with {summarizer_model_name}'
+    )
+    summarizer_output = cast(
+        # agent returns the state (dict[str, Any]), while simple LLM returns an AIMessage
+        dict[str, Any] | AIMessage,
+        summarizer.invoke(input=summarizer_input),  # type: ignore
+    )
+    logger.debug(summarizer_output)
+    logger.info(f'finished summary generation for "{title}"')
+
+    logger.info("starting formatting into JSON")
+    try:
+        # strip reasoning tokens first
+        summarizer_output_text = re.sub(
+            pattern=r"<think>.+?<\/think>",
+            repl="",
+            string=summarizer_output.content
+            if isinstance(summarizer_output, AIMessage)
+            else summarizer_output["messages"][-1].content,  # type: ignore
+            flags=re.DOTALL,
+        ).strip()
+        # then format the summary into a PaperGist instance
+        paper_gist = formatter.invoke(
+            input=[
+                HumanMessage(
+                    textwrap.dedent(f"""
+                    Format the following summary of an academic paper in Computer Science into the specified format.
+                    Each point should be around 50 words, and no newline character may be included.
+
+                    [Paper Summary]
+                    {summarizer_output_text}
+                    """)
+                )
+            ]
+        )
+        logger.debug(paper_gist)
+        logger.info("finished formatting")
+        return paper_gist
+    except Exception as e:
+        logger.error("failed to format the summary")
+        raise e
 
 
 def get_first_figure(pdf_url: str, data_dir: str, logger: Logger) -> Optional[str]:
@@ -108,23 +146,29 @@ def get_first_figure(pdf_url: str, data_dir: str, logger: Logger) -> Optional[st
             image_xref: int = first_image[0]
             # extract image itself and save it
             base_image = pdf.extract_image(xref=image_xref)
-            image = Image.open(io.BytesIO(base_image["image"]))
-            # check the aspect ratio of this image.
-            # since the figure describing the overall workflow tends to
-            # be long in horizontal direction, we only accept image whose
-            # ratio is more than 4 : 3
-            MIN_RATIO = 4 / 3
-            w, h = image.size
-            if (w / h) < MIN_RATIO:
-                continue
-            image_path = os.path.join(
-                data_dir,
-                "images",
-                f'{pdf_name}.{base_image["ext"]}',
-            )
-            image.save(image_path)
-            logger.info(f"extracted image from {pdf_name} and saved it at {image_path}")
-            return image_path
+            try:
+                image = Image.open(io.BytesIO(base_image["image"]))
+            except Exception as e:
+                logger.error(f"failed to extract an image: {e}")
+            else:
+                # check the aspect ratio of this image.
+                # since the figure describing the overall workflow tends to
+                # be long in horizontal direction, we only accept image whose
+                # ratio is more than 4 : 3
+                MIN_RATIO = 4 / 3
+                w, h = image.size
+                if (w / h) < MIN_RATIO:
+                    continue
+                image_path = os.path.join(
+                    data_dir,
+                    "images",
+                    f"{pdf_name}.{base_image['ext']}",
+                )
+                image.save(image_path)
+                logger.info(
+                    f"extracted image from {pdf_name} and saved it at {image_path}"
+                )
+                return image_path
         logger.info(f"found no image in {pdf_name}")
         return None  # no image was found in the pdf
 
@@ -132,7 +176,8 @@ def get_first_figure(pdf_url: str, data_dir: str, logger: Logger) -> Optional[st
 def process_results(
     search_results: list[Result],
     date: datetime,
-    llm: Llama,
+    summarizer: CompiledGraph | ChatOllama,
+    formatter: Runnable[LanguageModelInput, PaperGist],
     data_dir: str,
     logger: Logger,
 ) -> PaperList:
@@ -140,10 +185,17 @@ def process_results(
     for result in search_results:
         try:
             gist = generate_gist(
-                llm=llm, title=result.title, abstract=result.summary, logger=logger
+                summarizer=summarizer,
+                formatter=formatter,
+                title=result.title,
+                abstract=result.summary,
+                logger=logger,
             )
-        except RuntimeError:
+        except Exception as e:
             # failed to generate gist for this paper
+            logger.info(
+                f"failed to generate gist for this paper due to the following error: {e}, continuing"
+            )
             continue
         first_figure_path = (
             get_first_figure(pdf_url=result.pdf_url, data_dir=data_dir, logger=logger)
