@@ -66,6 +66,11 @@ class UrlWithText(BaseModel):
         description="the text to associate the url with. This text should be a short noun phrase explaining the content at the url. This text MUST NOT include any asterisks or any URLs."
     )
 
+    @field_validator("text")
+    @classmethod
+    def validate_text(cls, v: str) -> str:
+        return v.replace("*", "")
+
 
 class PaperGist(BaseModel):
     # descriptions are given for the sake of the formatter LLM
