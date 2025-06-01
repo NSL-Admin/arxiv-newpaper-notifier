@@ -94,7 +94,6 @@ def prepare_llms(
         model=summarizer_llm_name,
         num_ctx=10240,  # sufficiently large context to utilize both user's input and tool's output for reasoning
         num_predict=3072,
-        temperature=0.6,  # NOTE: should be 0.6 for deepseek-r1 models
         base_url=ollama_api_base_url,
         verbose=debug,
     )
