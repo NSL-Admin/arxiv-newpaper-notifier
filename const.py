@@ -61,11 +61,9 @@ REQUEST_HEADERS: Final[dict[str, str]] = {
 
 
 class UrlWithText(BaseModel):
-    url: str = Field(
-        description="the url mentioned in the reference section. Urls should NEVER refer to website's top page, or include the link to this paper itself."
-    )
+    url: str = Field(description="the url mentioned in the reference section.")
     text: str = Field(
-        description="the text to associate the url with. This text should be a short phrase explaining the content at the url."
+        description="the text to associate the url with. This text should be a short noun phrase explaining the content at the url. This text MUST NOT include any asterisks or any URLs."
     )
 
 
@@ -84,7 +82,7 @@ class PaperGist(BaseModel):
         description="write what are the most important findings of this research (single line without any URLs, around 50 words)"
     )
     reference_urls: list[UrlWithText] = Field(
-        description="write especially important URLs mentioned in the referece section if exists, that provide *important context* to understand this research."
+        description="write especially important URLs mentioned in the referece section if it exists, that provide important contexts to understand this research."
     )
 
     @field_validator("reference_urls")
@@ -96,6 +94,11 @@ class PaperGist(BaseModel):
             if "example.com" in url.url:
                 logging.warning(
                     f"the url {url.url} is a placeholder url, being removed from reference urls"
+                )
+                continue
+            if any(u in url.url for u in ["arxiv.org", "www.mdpi.com"]):
+                logging.warning(
+                    f"the url {url.url} is a URL to another paper which may not be very reliable, being removed from reference urls"
                 )
                 continue
             try:
@@ -111,7 +114,9 @@ class PaperGist(BaseModel):
                 )
                 continue
             else:
-                if r.status_code != 200:
+                if (
+                    r.status_code not in [200, 403]
+                ):  # 403 is usually a result from website's bot protection, so it's not likely to be a problem for the users
                     logging.warning(
                         f"{url.url} returned unusual status code {r.status_code}, being removed from reference urls"
                     )
