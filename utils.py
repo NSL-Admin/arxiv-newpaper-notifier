@@ -74,8 +74,9 @@ def generate_gist(
     if isinstance(summarizer, CompiledGraph):
         summarizer_input_text = (
             # here, the LLM is equipped with web search tools. So adding a short instruction about them.
-            summarizer_input_text  #               NOTE: is this specification in paren necessary? vvvvvvvvvvvvvvvvvvvvvvvvvvvv
-            + "\nYou can use tools given to you to obtain additional information about unfamiliar (even to CS graduate students) notions and keywords that appear in the abstract. Whether to use tools is up to you, but if you decide to use them, they MUST be used BEFORE you start to write the summary. "
+            summarizer_input_text  #                   NOTE: is this specification in paren necessary?  vvvvvvvvvvvvvvvvvvvvvvvvvvvv
+            + "\nYou can use tools given to you to obtain additional information about unfamiliar "  # (even to CS graduate students) "
+            + "notions and keywords that appear in the abstract. Whether to use tools is up to you, but if you decide to use them, they MUST be used BEFORE you start to write the summary. "
             + "Additionally, when you actually used tools to obtain information about a keyword from a Web article which turned out to be written in English and ACTUALLY INDISPENSIBLE to understand the research paper, "
             + "write its URL and title (that come as part of tools' responses) in the reference section at the bottom of the final summary. The reference section should ONLY exist when actual tool calls are made. The reference section should ONLY include urls that were really helpful, and shouldn't include random articles merely sharing similar concepts. "
             + "Moreover, please don't include any URLs of the paper itself, arxiv.org, www.mdpi.com, or placeholder URLs like example.com, which are not real URLs, in ANY of your outputs."
