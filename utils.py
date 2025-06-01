@@ -7,6 +7,7 @@ import urllib
 import urllib.request
 from datetime import datetime, timedelta
 from logging import Logger
+from pprint import pformat
 from typing import Any, Optional, cast
 
 import fitz
@@ -90,7 +91,7 @@ def generate_gist(
         dict[str, Any] | AIMessage,
         summarizer.invoke(input=summarizer_input),  # type: ignore
     )
-    logger.debug(summarizer_output)
+    logger.debug(pformat(summarizer_output))
     logger.info(f'finished summary generation for "{title}"')
 
     logger.info("starting formatting into JSON")
@@ -118,7 +119,7 @@ def generate_gist(
                 )
             ]
         )
-        logger.debug(paper_gist)
+        logger.debug(pformat(paper_gist))
         logger.info("finished formatting")
         return paper_gist
     except Exception as e:

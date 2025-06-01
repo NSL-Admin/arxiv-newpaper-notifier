@@ -11,7 +11,7 @@ from langgraph.graph.graph import CompiledGraph
 from langgraph.prebuilt import create_react_agent
 from pydantic import BaseModel, Field
 
-from const import PaperGist
+from const import REQUEST_HEADERS, PaperGist
 
 
 class FetchContentAtURLInput(BaseModel):
@@ -43,7 +43,9 @@ def fetch_content_at_url(
     Note: Only retrieves exact URL content - does not execute JS.
     """
     try:
-        r = requests.get(url=url, allow_redirects=True, timeout=10)
+        r = requests.get(
+            url=url, allow_redirects=True, timeout=10, headers=REQUEST_HEADERS
+        )
         r.raise_for_status()
     except Exception as e:
         return f"FAILED TO FETCH CONTENT: {type(e).__name__}: {e}"
