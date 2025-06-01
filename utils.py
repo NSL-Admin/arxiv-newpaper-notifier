@@ -1,6 +1,7 @@
 import io
 import os
 import re
+import shutil
 import tempfile
 import textwrap
 import urllib
@@ -73,9 +74,11 @@ def generate_gist(
     if isinstance(summarizer, CompiledGraph):
         summarizer_input_text = (
             # here, the LLM is equipped with web search tools. So adding a short instruction about them.
-            summarizer_input_text
-            + "\nYou can use tools given to you to obtain additional information about unfamiliar notions and keywords that appear in the abstract. "
-            + "When you used tools to obtain information about a keyword from a Web page, write its URL and title in the reference section at the bottom of the summary."
+            summarizer_input_text  #               NOTE: is this specification in paren necessary? vvvvvvvvvvvvvvvvvvvvvvvvvvvv
+            + "\nYou can use tools given to you to obtain additional information about unfamiliar (even to CS graduate students) notions and keywords that appear in the abstract. Whether to use tools is up to you, but if you decide to use them, they MUST be used BEFORE you start to write the summary. "
+            + "Additionally, when you actually used tools to obtain information about a keyword from a Web article which turned out to be written in English and ACTUALLY INDISPENSIBLE to understand the research paper, "
+            + "write its URL and title (that come as part of tools' responses) in the reference section at the bottom of the final summary. The reference section should ONLY exist when actual tool calls are made. The reference section should ONLY include urls that were really helpful, and shouldn't include random articles merely sharing similar concepts. "
+            + "Moreover, please don't include any URLs of the paper itself, arxiv.org, www.mdpi.com, or placeholder URLs like example.com, which are not real URLs, in ANY of your outputs."
         )
         summarizer_input = {"messages": [HumanMessage(summarizer_input_text)]}
         summarizer_model_name = summarizer.get_name()
@@ -91,7 +94,17 @@ def generate_gist(
         dict[str, Any] | AIMessage,
         summarizer.invoke(input=summarizer_input),  # type: ignore
     )
-    logger.debug(pformat(summarizer_output))
+    logger.debug(
+        pformat(
+            object=summarizer_output.model_dump()
+            if isinstance(summarizer_output, AIMessage)
+            else {
+                **summarizer_output,
+                "messages": [m.model_dump() for m in summarizer_output["messages"]],
+            },
+            width=shutil.get_terminal_size().columns,
+        )
+    )
     logger.info(f'finished summary generation for "{title}"')
 
     logger.info("starting formatting into JSON")
@@ -111,7 +124,10 @@ def generate_gist(
                 HumanMessage(
                     textwrap.dedent(f"""
                     Format the following summary of an academic paper in Computer Science into the specified format.
-                    Each point should be around 50 words, and no newline character may be included.
+
+                    [Format Instructions]
+                    - Each point should be around 50 words, and no newline character may be included.
+                    - When you want to emphasize words, be sure to surround them with *single asterisk at each end*, not double asterisks.
 
                     [Paper Summary]
                     {summarizer_output_text}
@@ -119,7 +135,11 @@ def generate_gist(
                 )
             ]
         )
-        logger.debug(pformat(paper_gist))
+        logger.debug(
+            pformat(
+                object=paper_gist.model_dump(), width=shutil.get_terminal_size().columns
+            )
+        )
         logger.info("finished formatting")
         return paper_gist
     except Exception as e:
