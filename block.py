@@ -20,18 +20,20 @@ def get_paper_block(paper: Paper, image_fileid: Optional[str]) -> list[Block]:
     blocks = [
         SectionBlock(text=MarkdownTextObject(text=f"*{paper.title}*")),
         DividerBlock(),
-        MarkdownTextObject(
-            text=textwrap.dedent(
-                f"""\
+        SectionBlock(
+            text=MarkdownTextObject(
+                text=textwrap.dedent(
+                    f"""\
                 - *about:* {paper.gist.about}
                 - *objective:* {paper.gist.objective}
                 - *novelty:* {paper.gist.novelty}
                 - *key:* {paper.gist.key}"""
-            )
-            + (
-                f"\n- *references:* {', '.join([f'<{u.url}|{u.text}>' for u in paper.gist.reference_urls])}"
-                if paper.gist.reference_urls
-                else ""
+                )
+                + (
+                    f"\n- *references:* {', '.join([f'<{u.url}|{u.text}>' for u in paper.gist.reference_urls])}"
+                    if paper.gist.reference_urls
+                    else ""
+                )
             )
         ),
     ]
