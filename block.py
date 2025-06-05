@@ -20,22 +20,22 @@ def get_paper_block(paper: Paper, image_fileid: Optional[str]) -> list[Block]:
     blocks = [
         SectionBlock(text=MarkdownTextObject(text=f"*{paper.title}*")),
         DividerBlock(),
-        SectionBlock(
-            text=MarkdownTextObject(
-                text=textwrap.dedent(
-                    f"""\
-                - *about:* {paper.gist.about}
-                - *objective:* {paper.gist.objective}
-                - *novelty:* {paper.gist.novelty}
-                - *key:* {paper.gist.key}"""
-                )
-                + (
-                    f"\n- *references:* {', '.join([f'<{u.url}|{u.text}>' for u in paper.gist.reference_urls])}"
-                    if paper.gist.reference_urls
-                    else ""
-                )
+        {  #  Markdown block (https://api.slack.com/reference/block-kit/blocks#markdown) is not present
+            # in slack_sdk.models.blocks as of now, so writing it as json literal here
+            "type": "markdown",
+            "text": textwrap.dedent(
+                f"""\
+                • **about:** {paper.gist.about}
+                • **objective:** {paper.gist.objective}
+                • **novelty:** {paper.gist.novelty}
+                • **key:** {paper.gist.key}"""
             )
-        ),
+            + (
+                f"\n- **references:** {', '.join([f'<{u.url}|{u.text}>' for u in paper.gist.reference_urls])}"
+                if paper.gist.reference_urls
+                else ""
+            ),
+        },
     ]
     if image_fileid:
         blocks += [

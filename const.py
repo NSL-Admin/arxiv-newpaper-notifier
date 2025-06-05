@@ -69,25 +69,26 @@ class UrlWithText(BaseModel):
     @field_validator("text")
     @classmethod
     def validate_text(cls, v: str) -> str:
-        return v.replace("*", "")
+        # text sometimes contains asterisk or is surrounded with square brackets
+        return v.replace("*", "").strip("[].")
 
 
 class PaperGist(BaseModel):
     # descriptions are given for the sake of the formatter LLM
     about: str = Field(
-        description="write what this research did in plain sentence (single line without any URLs, around 50 words)"
+        description="write what this research did in plain sentence (single line without any URLs, around 45 words)"
     )
     objective: str = Field(
-        description="write what this research tried to achieve (single line without any URLs, around 50 words)"
+        description="write what this research tried to achieve (single line without any URLs, around 45 words)"
     )
     novelty: str = Field(
-        description="write how this research is superior to existing ones (single line without any URLs, around 50 words)"
+        description="write how this research is superior to existing ones (single line without any URLs, around 45 words)"
     )
     key: str = Field(
-        description="write what are the most important findings of this research (single line without any URLs, around 50 words)"
+        description="write what are the most important findings of this research (single line without any URLs, around 45 words)"
     )
     reference_urls: list[UrlWithText] = Field(
-        description="write especially important URLs mentioned in the referece section if it exists, that provide important contexts to understand this research."
+        description="write especially important URLs mentioned in the referece section if it exists, that provide essential contexts to understand this research."
     )
 
     @field_validator("reference_urls")

@@ -67,8 +67,7 @@ def generate_gist(
         [Paper Information]
         title: {title}
         abstract: {abstract}
-        ```
-        """)
+        ```""")
 
     # input type is different depending on whether the summarizer is an agent or not
     if isinstance(summarizer, CompiledGraph):
@@ -77,7 +76,7 @@ def generate_gist(
             summarizer_input_text  #                   NOTE: is this specification in paren necessary?  vvvvvvvvvvvvvvvvvvvvvvvvvvvv
             + "\nYou can use tools given to you to obtain additional information about unfamiliar "  # (even to CS graduate students) "
             + "notions and keywords that appear in the abstract. Whether to use tools is up to you, but if you decide to use them, they MUST be used BEFORE you start to write the summary. "
-            + "Additionally, when you actually used tools to obtain information about a keyword from a Web article which turned out to be written in English and ACTUALLY INDISPENSIBLE to understand the research paper, "
+            + "Additionally, when you actually used tools to obtain information about a keyword from a Web article which turned out to be ACTUALLY INDISPENSIBLE to understand the research paper, "
             + "write its URL and title (that come as part of tools' responses) in the reference section at the bottom of the final summary. The reference section should ONLY exist when actual tool calls are made. The reference section should ONLY include urls that were really helpful, and shouldn't include random articles merely sharing similar concepts. "
             + "Moreover, please don't include any URLs of the paper itself, arxiv.org, www.mdpi.com, or placeholder URLs like example.com, which are not real URLs, in ANY of your outputs."
         )
@@ -123,16 +122,15 @@ def generate_gist(
         paper_gist = formatter.invoke(
             input=[
                 HumanMessage(
-                    textwrap.dedent(f"""
+                    textwrap.dedent(f"""\
                     Format the following summary of an academic paper in Computer Science into the specified format.
 
                     [Format Instructions]
                     - Each point should be around 50 words, and no newline character may be included.
-                    - When you want to emphasize words, be sure to surround them with *single asterisk at each end*, not double asterisks.
+                    - When you want to emphasize words, be sure to surround them with **double asterisks at each end**, not a single asterisk.
 
                     [Paper Summary]
-                    {summarizer_output_text}
-                    """)
+                    {summarizer_output_text}""")
                 )
             ]
         )
